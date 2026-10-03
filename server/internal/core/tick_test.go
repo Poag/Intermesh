@@ -145,7 +145,7 @@ func TestTooLongHomeMessageIsTruncatedToTheMaximumParts(t *testing.T) {
 		}
 		return false
 	})
-	max := mfb.MaxPartText(mfb.UnsignedLineBudget) * 3
+	max := mfb.MaxPartText(mfb.BroadcastLineBudget) * 3
 	if len(got) == 0 || len(got) > max || !strings.HasPrefix(got, nodeHex(member.num)+": 0123") {
 		t.Fatalf("got %d bytes (limit %d): %.40q", len(got), max, got)
 	}

@@ -392,8 +392,12 @@ func (e *Engine) refuse(node uint32, code, text, via string, pki bool) {
 		code = mfb.CodeBadFormat
 	}
 	line := (&mfb.Refusal{Node: node, Code: code, Text: text}).String()
-	if len(line) > mfb.DMLineBudget {
-		line = line[:mfb.DMLineBudget]
+	budget := mfb.BroadcastLineBudget // a broadcast must fit signed so strict receivers accept it
+	if pki {
+		budget = mfb.DMLineBudget
+	}
+	if len(line) > budget {
+		line = truncateUTF8(line, budget)
 	}
 	if pki && e.sendPKI(node, line, via) {
 		return

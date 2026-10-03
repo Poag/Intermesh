@@ -127,7 +127,7 @@ func (e *Engine) relayUpAtHome(from state.Peer, node uint32, ro ap.RelayObject) 
 // the roamer's node id. The server cannot post as the roamer: a receiver on the balanced
 // signature policy drops an unsigned broadcast from a node it knows signs.
 func (e *Engine) deliverToHome(ch *state.Channel, node uint32, text string) {
-	line := truncateUTF8(nodeHex(node)+": "+text, mfb.UnsignedLineBudget)
+	line := truncateUTF8(nodeHex(node)+": "+text, mfb.BroadcastLineBudget)
 	e.sendChannel(ch, meshwire.BroadcastNum, meshwire.PortText, []byte(line), true, e.gatewaysFor(ch.Name, "", ""))
 	e.fanoutToRoamers(ch, node, text)
 }
@@ -149,7 +149,7 @@ func (e *Engine) fanoutToRoamers(ch *state.Channel, sender uint32, text string) 
 	if !ch.Roaming {
 		return
 	}
-	per := mfb.MaxPartText(mfb.UnsignedLineBudget)
+	per := mfb.MaxPartText(mfb.BroadcastLineBudget)
 	line := truncateUTF8(nodeHex(sender)+": "+text, per*e.cfg.MaxParts)
 	now := e.now()
 	for _, reg := range e.st.Registrations() {
@@ -169,7 +169,7 @@ func (e *Engine) fanoutToRoamers(ch *state.Channel, sender uint32, text string) 
 		if err != nil {
 			continue
 		}
-		sealed, _, err := mfb.SealText(key, reg.Node, ch.Number, start, line, mfb.UnsignedLineBudget, e.cfg.MaxParts)
+		sealed, _, err := mfb.SealText(key, reg.Node, ch.Number, start, line, mfb.BroadcastLineBudget, e.cfg.MaxParts)
 		if err != nil {
 			continue
 		}
@@ -201,7 +201,7 @@ func (e *Engine) relayDownAtVisited(from state.Peer, node uint32, ro ap.RelayObj
 			return &ap.BadActivity{Reason: "bad sealed part"}
 		}
 		line := (&mfb.Sealed{Node: node, Ch: uint8(chNum), Ctr: ro.Ctr, Part: part, Total: total, Data: data}).String()
-		if len(line) > mfb.UnsignedLineBudget {
+		if len(line) > mfb.BroadcastLineBudget {
 			return &ap.BadActivity{Reason: "sealed part too long"}
 		}
 		e.broadcastText(e.roamChannel(), line, v.Via)
