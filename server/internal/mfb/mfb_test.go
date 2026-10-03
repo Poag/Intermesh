@@ -132,7 +132,7 @@ func TestSealSingleAndMultiPart(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, done, err = r.Add(time.Now(), key, m.(*Sealed))
+			got, done, err = r.Add(time.Now(), 1, key, m.(*Sealed))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -168,7 +168,7 @@ func TestPartLimit(t *testing.T) {
 	}
 	r := NewReassembler(2)
 	p, _ := SealPart(key, 1, 1, 0, 1, 3, []byte("x"))
-	if _, _, err := r.Add(time.Now(), key, p); !errors.Is(err, ErrTooManyParts) {
+	if _, _, err := r.Add(time.Now(), 1, key, p); !errors.Is(err, ErrTooManyParts) {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -182,28 +182,28 @@ func TestTamperingAndReplay(t *testing.T) {
 	r := NewReassembler(3)
 	renumbered := *parts[0]
 	renumbered.Part, renumbered.Total = 2, 2
-	if _, _, err := r.Add(time.Now(), key, &renumbered); err == nil {
+	if _, _, err := r.Add(time.Now(), 1, key, &renumbered); err == nil {
 		t.Fatal("renumbered part accepted")
 	}
 	moved := *parts[0]
 	moved.Node = 2
-	if _, _, err := r.Add(time.Now(), key, &moved); err == nil {
+	if _, _, err := r.Add(time.Now(), 1, key, &moved); err == nil {
 		t.Fatal("part moved to another node accepted")
 	}
 	flipped := *parts[0]
 	flipped.Data = append([]byte(nil), parts[0].Data...)
 	flipped.Data[0] ^= 1
-	if _, _, err := r.Add(time.Now(), key, &flipped); err == nil {
+	if _, _, err := r.Add(time.Now(), 1, key, &flipped); err == nil {
 		t.Fatal("corrupted ciphertext accepted")
 	}
-	if _, _, err := r.Add(time.Now(), key, parts[0]); err != nil {
+	if _, _, err := r.Add(time.Now(), 1, key, parts[0]); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := r.Add(time.Now(), key, parts[0]); !errors.Is(err, ErrReplay) {
+	if _, _, err := r.Add(time.Now(), 1, key, parts[0]); !errors.Is(err, ErrReplay) {
 		t.Fatalf("replay not detected: %v", err)
 	}
 	wrongKey := bytes.Repeat([]byte{1}, 32)
-	if _, _, err := NewReassembler(3).Add(time.Now(), wrongKey, parts[0]); err == nil {
+	if _, _, err := NewReassembler(3).Add(time.Now(), 1, wrongKey, parts[0]); err == nil {
 		t.Fatal("wrong key accepted")
 	}
 }
@@ -213,7 +213,7 @@ func TestMissingPartExpires(t *testing.T) {
 	parts, _, _ := SealText(key, 7, 3, 0, strings.Repeat("m", 150), BroadcastLineBudget, 3)
 	r := NewReassembler(3)
 	t0 := time.Unix(1000, 0)
-	if _, done, err := r.Add(t0, key, parts[0]); err != nil || done {
+	if _, done, err := r.Add(t0, 1, key, parts[0]); err != nil || done {
 		t.Fatal(err, done)
 	}
 	if l := r.Expire(t0.Add(119*time.Second), 2*time.Minute); len(l) != 0 {
@@ -225,6 +225,22 @@ func TestMissingPartExpires(t *testing.T) {
 	}
 	if len(r.Expire(t0.Add(time.Hour), time.Minute)) != 0 {
 		t.Fatal("lost twice")
+	}
+}
+
+func TestReplayWindowsAreKeptPerRegistration(t *testing.T) {
+	key := testKey(t)
+	p, _ := SealPart(key, 5, 1, 0, 1, 1, []byte("one"))
+	r := NewReassembler(3)
+	if _, _, err := r.Add(time.Now(), 100, key, p); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := r.Add(time.Now(), 100, key, p); !errors.Is(err, ErrReplay) {
+		t.Fatal("replay within a registration not detected")
+	}
+	// a re-registration derives new keys and restarts its counters at zero
+	if _, _, err := r.Add(time.Now(), 101, key, p); err != nil {
+		t.Fatalf("counter restart after re-registration rejected: %v", err)
 	}
 }
 

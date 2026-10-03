@@ -227,15 +227,17 @@ type Outbox struct {
 	GiveUp   time.Duration
 	Sleep    func(ctx context.Context, d time.Duration) error
 
-	wg      sync.WaitGroup
 	mu      sync.Mutex
+	cond    *sync.Cond
 	pending int
 	Dropped func(inbox string, act *Activity, err error) // called when a delivery is abandoned
 }
 
 // NewOutbox returns an outbox using the default schedule and 24 hour limit.
 func NewOutbox(c *Client) *Outbox {
-	return &Outbox{Client: c, Schedule: DefaultSchedule, GiveUp: GiveUpAfter, Sleep: sleepCtx}
+	o := &Outbox{Client: c, Schedule: DefaultSchedule, GiveUp: GiveUpAfter, Sleep: sleepCtx}
+	o.cond = sync.NewCond(&o.mu)
+	return o
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -251,18 +253,28 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 
 // Enqueue starts delivering act to inbox in the background.
 func (o *Outbox) Enqueue(ctx context.Context, inbox string, act *Activity) {
+	o.EnqueueWith(ctx, inbox, act, nil)
+}
+
+// EnqueueWith is Enqueue with a callback run if this delivery is abandoned.
+func (o *Outbox) EnqueueWith(ctx context.Context, inbox string, act *Activity, onDrop func(error)) {
 	o.mu.Lock()
 	o.pending++
 	o.mu.Unlock()
-	o.wg.Add(1)
 	go func() {
-		defer o.wg.Done()
-		defer func() { o.mu.Lock(); o.pending--; o.mu.Unlock() }()
-		o.deliver(ctx, inbox, act)
+		defer func() {
+			o.mu.Lock()
+			o.pending--
+			if o.pending == 0 {
+				o.cond.Broadcast()
+			}
+			o.mu.Unlock()
+		}()
+		o.deliver(ctx, inbox, act, onDrop)
 	}()
 }
 
-func (o *Outbox) deliver(ctx context.Context, inbox string, act *Activity) {
+func (o *Outbox) deliver(ctx context.Context, inbox string, act *Activity, onDrop func(error)) {
 	start := o.Client.Now()
 	var waited time.Duration
 	var err error
@@ -291,10 +303,19 @@ func (o *Outbox) deliver(ctx context.Context, inbox string, act *Activity) {
 	if o.Dropped != nil {
 		o.Dropped(inbox, act, err)
 	}
+	if onDrop != nil {
+		onDrop(err)
+	}
 }
 
-// Wait blocks until every queued delivery has finished or been abandoned (tests).
-func (o *Outbox) Wait() { o.wg.Wait() }
+// Wait blocks until every queued delivery has finished or been abandoned (shutdown and tests).
+func (o *Outbox) Wait() {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	for o.pending > 0 {
+		o.cond.Wait()
+	}
+}
 
 // Pending reports how many deliveries are still being attempted.
 func (o *Outbox) Pending() int {

@@ -60,6 +60,7 @@ type Lost struct {
 }
 
 type partialKey struct {
+	ctx   uint64
 	node  uint32
 	ch    byte
 	first uint64
@@ -79,25 +80,28 @@ type Reassembler struct {
 	mu       sync.Mutex
 	maxParts int
 	partials map[partialKey]*partial
-	replay   map[uint32]*ReplayWindow
+	replay   map[uint64]*ReplayWindow
 }
 
 // NewReassembler creates a reassembler that refuses messages of more than maxParts parts.
 func NewReassembler(maxParts int) *Reassembler {
-	return &Reassembler{maxParts: maxParts, partials: map[partialKey]*partial{}, replay: map[uint32]*ReplayWindow{}}
+	return &Reassembler{maxParts: maxParts, partials: map[partialKey]*partial{}, replay: map[uint64]*ReplayWindow{}}
 }
 
 // Add authenticates a part with key and returns the whole text once every part has arrived.
-func (r *Reassembler) Add(now time.Time, key []byte, s *Sealed) (string, bool, error) {
+// ctx identifies the registration the key belongs to (for example the node and accepted
+// registration packet ID): replay windows and partial messages are kept per ctx, so a
+// re-registration, which derives new keys and restarts its counters, is not mistaken for a replay.
+func (r *Reassembler) Add(now time.Time, ctx uint64, key []byte, s *Sealed) (string, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if s.Total > r.maxParts {
 		return "", false, ErrTooManyParts
 	}
-	w := r.replay[s.Node]
+	w := r.replay[ctx]
 	if w == nil {
 		w = &ReplayWindow{}
-		r.replay[s.Node] = w
+		r.replay[ctx] = w
 	}
 	if !w.Check(s.Ctr) {
 		return "", false, ErrReplay
@@ -110,7 +114,7 @@ func (r *Reassembler) Add(now time.Time, key []byte, s *Sealed) (string, bool, e
 	if s.Total == 1 {
 		return string(plain), true, nil
 	}
-	pk := partialKey{s.Node, s.Ch, s.Ctr - uint64(s.Part-1), s.Total}
+	pk := partialKey{ctx, s.Node, s.Ch, s.Ctr - uint64(s.Part-1), s.Total}
 	p := r.partials[pk]
 	if p == nil {
 		p = &partial{parts: make([][]byte, s.Total), since: now}

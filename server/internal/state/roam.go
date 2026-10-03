@@ -522,3 +522,71 @@ func (r *RateLimiter) Allow(key string, now time.Time) bool {
 	r.hits[key] = append(h, now)
 	return true
 }
+
+// RemovePeer deletes a peer (used when an admin-made link is undone).
+func (st *State) RemovePeer(actor string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	delete(st.s.Peers, actor)
+	_ = st.persist()
+}
+
+// QueueRenameNotices records that every current member must be told the community's new
+// tag the next time their node is heard.
+func (st *State) QueueRenameNotices(newTag string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for n, m := range st.s.Members {
+		if !m.Pending {
+			st.s.RenameNotices[n] = newTag
+		}
+	}
+	_ = st.persist()
+}
+
+// TakeRenameNotice returns and clears the pending notice for a node.
+func (st *State) TakeRenameNotice(node uint32) (string, bool) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	t, ok := st.s.RenameNotices[node]
+	if ok {
+		delete(st.s.RenameNotices, node)
+		_ = st.persist()
+	}
+	return t, ok
+}
+
+// KnownNode reports whether a node has been seen before: it is a member, a visitor, or its
+// key was learned. Used for the "new node detected" beacon trigger.
+func (st *State) KnownNode(node uint32) bool {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if _, ok := st.s.Members[node]; ok {
+		return true
+	}
+	if _, ok := st.s.Visits[node]; ok {
+		return true
+	}
+	_, ok := st.s.NodeKeys[node]
+	return ok
+}
+
+// BlockedTag reports whether a blocked peer holds (or held) the tag.
+func (st *State) BlockedTag(tag string) bool {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for _, p := range st.s.Peers {
+		if !p.Blocked {
+			continue
+		}
+		if p.HomeTag == tag {
+			return true
+		}
+		for _, a := range p.Aliases {
+			if a == tag {
+				return true
+			}
+		}
+	}
+	return false
+}

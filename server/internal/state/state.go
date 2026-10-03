@@ -104,8 +104,10 @@ type Registration struct {
 // Channel is a mesh channel the server holds the key for.
 type Channel struct {
 	Name           string `json:"name"`
-	Key            []byte `json:"key"`   // expanded key; empty means no encryption
-	Scope          string `json:"scope"` // mesh, community, federated or public
+	Number         uint8  `json:"number,omitempty"`  // home channel number carried in sealed traffic (2 hex digits)
+	Roaming        bool   `json:"roaming,omitempty"` // roamers registered elsewhere receive this channel's traffic sealed
+	Key            []byte `json:"key"`               // expanded key; empty means no encryption
+	Scope          string `json:"scope"`             // mesh, community, federated or public
 	Uplink         bool   `json:"uplink"`
 	Downlink       bool   `json:"downlink"`
 	RetentionHours int    `json:"retentionHours,omitempty"`
@@ -123,6 +125,7 @@ type Gateway struct {
 
 // Identity is this server's key material.
 type Identity struct {
+	Created    time.Time `json:"created,omitempty"` // when this identity was made; the newer of two servers sharing a tag renames
 	HomeTag    string    `json:"homeTag"`
 	MeshPriv   []byte    `json:"meshPriv"` // Curve25519
 	APPriv     []byte    `json:"apPriv"`   // Ed25519 seed
@@ -144,7 +147,8 @@ type snapshot struct {
 	SeenActivities map[string]time.Time     `json:"seenActivities"`
 	Channels       map[string]*Channel      `json:"channels"`
 	Gateways       map[string]*Gateway      `json:"gateways"`
-	NodeKeys       map[uint32][]byte        `json:"nodeKeys"` // public keys learned from NodeInfo
+	NodeKeys       map[uint32][]byte        `json:"nodeKeys"`                // public keys learned from NodeInfo
+	RenameNotices  map[uint32]string        `json:"renameNotices,omitempty"` // members still to be told of a new tag
 }
 
 // State is the server's durable state.
@@ -218,6 +222,9 @@ func fillMaps(s *snapshot) {
 	}
 	if s.NodeKeys == nil {
 		s.NodeKeys = map[uint32][]byte{}
+	}
+	if s.RenameNotices == nil {
+		s.RenameNotices = map[uint32]string{}
 	}
 }
 
