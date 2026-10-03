@@ -74,7 +74,7 @@ Every on-air message is one line of ASCII text starting `MFB1`, then a type lett
 
 ## 5. Server-to-server
 
-Delivery uses ActivityPub with RFC 9421 HTTP message signatures. Standard Follow, Accept, Reject and Undo are reused where they fit. The extension context URL will be published from this repository (path to be fixed once files exist).
+Delivery uses ActivityPub with RFC 9421 HTTP message signatures. Standard Follow, Accept, Reject and Undo are reused where they fit. The extension context is published from this repository at [context/v1.jsonld](context/v1.jsonld). The URL in the examples assumes the repository's default branch is `main` and that the file is merged there (unverified; to be re-checked once the branch exists). The context file is a first draft of term definitions and has not been tested with a JSON-LD processor or an ActivityPub library.
 
 - Signed timestamp on each activity; a server rejects one older than 5 minutes (admin-changeable) and remembers recent activity IDs. Maximum activity size 64 KB (admin-changeable). Retries use growing gaps for up to 24 hours, signing each attempt afresh, then drop. Key rotation is admin-triggered: the new key is published on the actor and the old key accepted for an admin-set overlap.
 - Learned servers are trusted by default; an admin can block them. Blocking is silent (the blocked server is not answered). The console shows each new server. The shared server list is capped by the admin (default 500); when full, the least recently heard is dropped.
@@ -83,7 +83,7 @@ Delivery uses ActivityPub with RFC 9421 HTTP message signatures. Standard Follow
 
 ```json
 {
-  "@context": ["https://www.w3.org/ns/activitystreams", "<intermesh context, to be set>"],
+  "@context": ["https://www.w3.org/ns/activitystreams", "https://raw.githubusercontent.com/Poag/Intermesh/main/context/v1.jsonld"],
   "type": "Roam",
   "id": "https://b.example/activities/123",
   "actor": "https://b.example/actor",
@@ -138,5 +138,5 @@ Kind `sealed` carries sealed traffic. Kind `packet` (down only) carries a comple
 - Firmware and library claims need a direct read of the primary source: signature fit and survival through MQTT uplink, signing on by default in a stable 2.8, whether nodes accept a downlinked packet signed by the server, node IDs derived from the public key, whether the sender's public key arrives in an uplinked DM, queue size, shared contact import and manual entry in stock apps, default signature policy (sources disagree between balanced and compatible).
 - Whether the chosen Go libraries support RFC 9421 and the custom activity types. Candidates surveyed: go-ap (MIT), go-fed/activity (BSD-3-Clause, appears archived), Mochi MQTT (MIT).
 - Independent cryptography review; InterRoam name clash check; encryption rules in licensed amateur mode and other legal and regional questions (not legal advice).
-- Final wording and field order for beacon and refusal messages; retry gap schedule; whether a hand-made server link is marked differently in the console; the extension context URL.
+- Final wording and field order for beacon and refusal messages; retry gap schedule; whether a hand-made server link is marked differently in the console.
 - Contact with the Meshtastic project, and moving the spec to their repository if they adopt it.

@@ -1,0 +1,26 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "im": "https://raw.githubusercontent.com/Poag/Intermesh/main/context/v1.jsonld#",
+    "as": "https://www.w3.org/ns/activitystreams#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "Roam": "im:Roam",
+    "Relay": "im:Relay",
+    "Introduce": "im:Introduce",
+    "Rename": "im:Rename",
+    "node": { "@id": "im:node", "@type": "xsd:string" },
+    "homeTag": { "@id": "im:homeTag", "@type": "xsd:string" },
+    "packetId": { "@id": "im:packetId", "@type": "xsd:unsignedInt" },
+    "days": { "@id": "im:days", "@type": "xsd:unsignedByte" },
+    "packet": { "@id": "im:packet", "@type": "xsd:base64Binary" },
+    "direction": { "@id": "im:direction", "@type": "xsd:string" },
+    "kind": { "@id": "im:kind", "@type": "xsd:string" },
+    "ctr": { "@id": "im:ctr", "@type": "xsd:unsignedLong" },
+    "data": { "@id": "im:data", "@type": "xsd:string" },
+    "servers": { "@id": "im:servers", "@container": "@set" },
+    "lastHeard": { "@id": "im:lastHeard", "@type": "xsd:dateTime" },
+    "oldTag": { "@id": "im:oldTag", "@type": "xsd:string" },
+    "newTag": { "@id": "im:newTag", "@type": "xsd:string" },
+    "server": { "@id": "im:server", "@type": "@id" }
+  }
+}
