@@ -174,7 +174,7 @@ Kind `sealed` carries one part of sealed traffic (`ch` and `part` are additions 
 
 - App behaviour, partly checked by reading the Android and Apple app source (see section 8) and not tried on a phone: whether apps show a broadcast text on the InterRoam channel that names the node, a phone-side check that a contact link imports as expected, and whether a roaming-aware app exists or who builds it.
 - Real on-air behaviour: nothing has run on hardware. Sealed message capacity and beacon airtime are computed, not measured.
-- Whether LOCAL_ONLY and KNOWN_ONLY rebroadcast modes also stop a downlinked packet (only NONE and the mute role were checked).
+- In LOCAL_ONLY and KNOWN_ONLY rebroadcast modes a gateway relays an undecodable PKI unicast only if the sender or receiver has a user record in its node database (read from source). How KNOWN_ONLY treats decoded broadcasts from an unknown node number was not traced.
 - Whether a gateway accepts a downlinked NodeInfo from a node it does not know and whether a node verifies the server's signed beacon after learning its key; the code was read but nothing was run.
 - Whether the chosen Go libraries support the custom activities was settled by writing the ActivityPub layer from the standard library; no ActivityPub library is used.
 - Independent cryptography review (the sealing scheme and key derivation); InterRoam name clash check; encryption rules in licensed amateur mode and other legal and regional questions (not legal advice).
