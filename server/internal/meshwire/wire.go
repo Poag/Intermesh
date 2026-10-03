@@ -470,3 +470,62 @@ func UnmarshalUser(b []byte) (*User, error) {
 	}
 	return u, nil
 }
+
+// SharedContact is meshtastic.SharedContact (admin.proto): the contact a Meshtastic app imports
+// from a QR code, an NFC tag or a pasted link, which hands a node another node's number and key.
+type SharedContact struct {
+	NodeNum          uint32
+	User             *User
+	ShouldIgnore     bool
+	ManuallyVerified bool
+}
+
+// Marshal encodes a SharedContact.
+func (c *SharedContact) Marshal() []byte {
+	var b []byte
+	b = appendVarintField(b, 1, uint64(c.NodeNum))
+	if c.User != nil {
+		b = protowire.AppendTag(b, 2, protowire.BytesType)
+		b = protowire.AppendBytes(b, c.User.Marshal())
+	}
+	b = appendBool(b, 3, c.ShouldIgnore)
+	b = appendBool(b, 4, c.ManuallyVerified)
+	return b
+}
+
+// UnmarshalSharedContact decodes a SharedContact.
+func UnmarshalSharedContact(b []byte) (*SharedContact, error) {
+	c := &SharedContact{}
+	var uerr error
+	err := walk(b, func(num protowire.Number, typ protowire.Type, b []byte) (int, bool) {
+		switch num {
+		case 1:
+			if v, n, ok := consumeVarint(typ, b); ok {
+				c.NodeNum = uint32(v)
+				return n, true
+			}
+		case 2:
+			if v, n, ok := consumeBytes(typ, b); ok {
+				if n >= 0 {
+					c.User, uerr = UnmarshalUser(v)
+				}
+				return n, true
+			}
+		case 3:
+			if v, n, ok := consumeVarint(typ, b); ok {
+				c.ShouldIgnore = v != 0
+				return n, true
+			}
+		case 4:
+			if v, n, ok := consumeVarint(typ, b); ok {
+				c.ManuallyVerified = v != 0
+				return n, true
+			}
+		}
+		return 0, false
+	})
+	if err != nil {
+		return nil, err
+	}
+	return c, uerr
+}

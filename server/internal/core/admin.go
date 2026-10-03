@@ -14,6 +14,7 @@ import (
 	"github.com/Poag/Intermesh/server/internal/ap"
 	"github.com/Poag/Intermesh/server/internal/broker"
 	"github.com/Poag/Intermesh/server/internal/meshcrypto"
+	"github.com/Poag/Intermesh/server/internal/meshwire"
 	"github.com/Poag/Intermesh/server/internal/state"
 )
 
@@ -29,7 +30,14 @@ type Contact struct {
 	PublicKeyB64 string `json:"publicKeyBase64"`
 	PublicKeyHex string `json:"publicKeyHex"`
 	Fingerprint  string `json:"fingerprint"` // first 8 bytes of SHA-256 of the key, to check a typed key
+	// URL is a shared-contact link. The Android and Apple apps import it from a QR code made from
+	// it, from NFC, or pasted in; both read https://meshtastic.org/v/# followed by the base64url of
+	// a SharedContact (read from their source on 4 Oct 2026; not tried on a phone).
+	URL string `json:"url"`
 }
+
+// SharedContactURLPrefix is the prefix both mobile apps recognise for a shared contact.
+const SharedContactURLPrefix = "https://meshtastic.org/v/#"
 
 // PublicKeyBase64 returns the public key in base64.
 func (c Contact) PublicKeyBase64() string { return c.PublicKeyB64 }
@@ -37,7 +45,9 @@ func (c Contact) PublicKeyBase64() string { return c.PublicKeyB64 }
 // ServerContact returns the contact details.
 func (e *Engine) ServerContact() Contact {
 	sum := sha256.Sum256(e.meshPub)
-	return Contact{NodeID: e.serverID, NodeNum: e.serverNum, PublicKeyB64: base64.StdEncoding.EncodeToString(e.meshPub),
+	sc := &meshwire.SharedContact{NodeNum: e.serverNum, ManuallyVerified: false, User: &meshwire.User{
+		ID: e.serverID, LongName: truncateUTF8(e.cfg.Name, 40), ShortName: shortName(e.HomeTag()), PublicKey: e.meshPub}}
+	return Contact{URL: SharedContactURLPrefix + base64.RawURLEncoding.EncodeToString(sc.Marshal()), NodeID: e.serverID, NodeNum: e.serverNum, PublicKeyB64: base64.StdEncoding.EncodeToString(e.meshPub),
 		PublicKeyHex: hex.EncodeToString(e.meshPub), Fingerprint: hex.EncodeToString(sum[:8])}
 }
 

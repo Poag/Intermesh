@@ -26,7 +26,7 @@ Administer it with `intermeshd ctl`, which talks to a local admin API protected 
 
     intermeshd ctl -config ./mesh/config.json channel-add Home default scope=community uplink downlink roaming=1
     intermeshd ctl -config ./mesh/config.json gateway-add gw1 Home InterRoam     # prints the password once
-    intermeshd ctl -config ./mesh/config.json contact                            # node ID and public key to hand to members
+    intermeshd ctl -config ./mesh/config.json contact                            # node ID, public key and a shared contact link for members (QR code from the url)
     intermeshd ctl -config ./mesh/config.json psk-add single-use alice
     intermeshd ctl -config ./mesh/config.json link https://other.example/actor   # link to another community
 

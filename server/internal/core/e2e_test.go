@@ -2,11 +2,13 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Poag/Intermesh/server/internal/ap"
+	"github.com/Poag/Intermesh/server/internal/meshcrypto"
 	"github.com/Poag/Intermesh/server/internal/meshwire"
 	"github.com/Poag/Intermesh/server/internal/mfb"
 	"github.com/Poag/Intermesh/server/internal/state"
@@ -658,5 +660,39 @@ func TestCommunityScopeRelaysBetweenGatewaysButMeshScopeDoesNot(t *testing.T) {
 	s.uplink("Mesh", n.channelUplink(t, "Mesh", meshKey, s.gwID, meshwire.PortText, []byte("stay local"), meshwire.BroadcastNum, true, 0))
 	if len(s.gw.all()) != 0 {
 		t.Fatal("a mesh-only channel was relayed")
+	}
+}
+
+func meshcryptoID(n uint32) string    { return meshcrypto.NodeID(n) }
+func meshcryptoNum(pub []byte) uint32 { return meshcrypto.NodeNumFromKey(pub) }
+
+// The server contact link must be readable the way the Android and Apple apps read it:
+// https://meshtastic.org/v/# followed by base64url of a SharedContact.
+func TestServerContactLinkDecodesLikeTheAppsDoIt(t *testing.T) {
+	clk := newClock()
+	s := newSite(t, clk, "Kent Mesh", nil)
+	c := s.eng.ServerContact()
+	if !strings.HasPrefix(c.URL, "https://meshtastic.org/v/#") {
+		t.Fatalf("url %q", c.URL)
+	}
+	frag := strings.TrimPrefix(c.URL, "https://meshtastic.org/v/#")
+	// Android: replace '-' and '_' then Base64-decode (padding optional); Apple: pad then decode.
+	raw, err := base64.RawURLEncoding.DecodeString(frag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sc, err := meshwire.UnmarshalSharedContact(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sc.NodeNum != s.serverNum() || sc.NodeNum == 0 {
+		t.Fatalf("node number %08x", sc.NodeNum)
+	}
+	if sc.User == nil || sc.User.ID != meshcryptoID(s.serverNum()) || sc.User.LongName != "Kent Mesh" || string(sc.User.PublicKey) != string(s.serverPub()) {
+		t.Fatalf("user %+v", sc.User)
+	}
+	// the node number a node derives from the key it imports is the contact's number
+	if meshcryptoNum(sc.User.PublicKey) != sc.NodeNum {
+		t.Fatal("the contact's node number is not the CRC-32 of its key, so a node would not trust it")
 	}
 }
