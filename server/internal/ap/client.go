@@ -46,9 +46,11 @@ const MaxActorBytes = 64 << 10
 // Client delivers activities and fetches actor documents.
 type Client struct {
 	HTTP *http.Client
-	Self Self
+	Self Self // after the client is in use, change the key only through SetKey
 	Now  func() time.Time
 	Log  *slog.Logger
+
+	keyMu sync.RWMutex
 	// AllowPrivate permits requests to loopback and private addresses. It is for tests and
 	// for communities that deliberately federate over a private network; the default refuses
 	// them so an Introduce cannot make the server probe its own network.
@@ -88,6 +90,19 @@ func NewClient(self Self, allowPrivate, allowHTTP bool) *Client {
 		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	return c
+}
+
+// SetKey replaces the signing key (admin-triggered rotation).
+func (c *Client) SetKey(keyID string, priv ed25519.PrivateKey) {
+	c.keyMu.Lock()
+	c.Self.KeyID, c.Self.Priv = keyID, priv
+	c.keyMu.Unlock()
+}
+
+func (c *Client) signer() (string, ed25519.PrivateKey) {
+	c.keyMu.RLock()
+	defer c.keyMu.RUnlock()
+	return c.Self.KeyID, c.Self.Priv
 }
 
 func isPrivate(ip netip.Addr) bool {
@@ -200,7 +215,8 @@ func (c *Client) Send(ctx context.Context, inbox string, act *Activity) error {
 	req.Header.Set("Accept", ContentType)
 	nonce := make([]byte, 8)
 	rand.Read(nonce)
-	if err := SignRequest(req, body, c.Self.KeyID, c.Self.Priv, c.Now(), hex.EncodeToString(nonce)); err != nil {
+	keyID, priv := c.signer()
+	if err := SignRequest(req, body, keyID, priv, c.Now(), hex.EncodeToString(nonce)); err != nil {
 		return &PermanentError{err}
 	}
 	resp, err := c.HTTP.Do(req)

@@ -398,3 +398,16 @@ func (e *Engine) baseURL() string { return strings.TrimSuffix(e.self.ActorURL, "
 func nodeHex(n uint32) string { return fmt.Sprintf("%08x", n) }
 
 func backgroundCtx() context.Context { return context.Background() }
+
+// NodeIDFromIdentity returns the server's mesh node id for an identity, so the MQTT broker can
+// be built before the engine.
+func NodeIDFromIdentity(id state.Identity) (string, error) {
+	if len(id.MeshPriv) != 32 {
+		return "", errors.New("core: identity has no mesh key")
+	}
+	pub, err := meshcrypto.PublicKey(id.MeshPriv)
+	if err != nil {
+		return "", err
+	}
+	return meshcrypto.NodeID(meshcrypto.NodeNumFromKey(pub)), nil
+}

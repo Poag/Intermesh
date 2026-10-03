@@ -573,3 +573,15 @@ func (st *State) NoteGatewayNode(username, nodeID string) {
 		_ = st.persist()
 	}
 }
+
+// DeleteGateway removes a gateway credential.
+func (st *State) DeleteGateway(username string) bool {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if _, ok := st.s.Gateways[username]; !ok {
+		return false
+	}
+	delete(st.s.Gateways, username)
+	_ = st.persist()
+	return true
+}

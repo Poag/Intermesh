@@ -266,7 +266,7 @@ func TestKeyRotationWithOverlap(t *testing.T) {
 	newID.APPriv, newID.APKeyID = seed, a.actor()+"#key-2"
 	newID.OldAPPub, newID.OldAPKeyID, newID.OldAPUntil = oldPub, oldID.APKeyID, clk.Now().Add(time.Hour)
 	a.st.SetIdentity(newID)
-	a.client.Self.KeyID, a.client.Self.Priv = newID.APKeyID, ed25519.NewKeyFromSeed(seed)
+	a.client.SetKey(newID.APKeyID, ed25519.NewKeyFromSeed(seed))
 
 	doc := a.srv.ActorDocument()
 	if doc.PreviousPublicKey == nil || doc.PublicKey.ID != a.actor()+"#key-2" {
@@ -283,8 +283,8 @@ func TestKeyRotationWithOverlap(t *testing.T) {
 		t.Fatalf("peer record not updated: %+v", p)
 	}
 	// During the overlap the old key still works.
-	oldClient := *a.client
-	oldClient.Self.KeyID, oldClient.Self.Priv = oldID.APKeyID, ed25519.NewKeyFromSeed(oldID.APPriv)
+	oldClient := NewClient(Self{ActorURL: a.actor(), InboxURL: a.srv.Self.InboxURL, KeyID: oldID.APKeyID, Priv: ed25519.NewKeyFromSeed(oldID.APPriv)}, true, true)
+	oldClient.Now = clk.Now
 	clk.Advance(time.Second)
 	if err := oldClient.Send(ctx, b.srv.Self.InboxURL, a.activity(clk, TypeRelay, b, nil)); err != nil {
 		t.Fatalf("old key refused during overlap: %v", err)
