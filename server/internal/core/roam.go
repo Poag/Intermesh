@@ -183,8 +183,8 @@ func (e *Engine) handleAnswer(from state.Peer, act *ap.Activity) error {
 		return err
 	}
 	e.event("registration", "roamer "+nodeHex(node)+" from community "+v.HomeTag+" registered for "+strconv.Itoa(res.Days)+" days")
-	line := (&mfb.Confirm{HomeTag: v.HomeTag, Days: res.Days, Name: e.cfg.Name}).String()
-	e.sendUnicast(e.roamChannel(), node, line, v.Via)
+	line := (&mfb.Confirm{Node: node, HomeTag: v.HomeTag, Days: res.Days, Name: e.cfg.Name}).String()
+	e.broadcastText(e.roamChannel(), line, v.Via)
 	return nil
 }
 

@@ -55,7 +55,7 @@ func (e *Engine) enrol(p *meshwire.MeshPacket, key []byte, m *mfb.Enrol, via str
 	}
 	reply := func(msg interface{ String() string }) { e.sendPKI(node, msg.String(), via) }
 	if e.cfg.Enrolment == EnrolClosed {
-		reply(&mfb.Refusal{Code: mfb.CodeEnrolClosed})
+		reply(&mfb.Refusal{Node: node, Code: mfb.CodeEnrolClosed})
 		return
 	}
 	var how string
@@ -66,7 +66,7 @@ func (e *Engine) enrol(p *meshwire.MeshPacket, key []byte, m *mfb.Enrol, via str
 	case EnrolPSK:
 		id, ok := e.st.ConsumePSK(m.PSK)
 		if m.PSK == "" || !ok {
-			reply(&mfb.Refusal{Code: mfb.CodeEnrolPSK})
+			reply(&mfb.Refusal{Node: node, Code: mfb.CodeEnrolPSK})
 			return
 		}
 		how = id
@@ -76,16 +76,16 @@ func (e *Engine) enrol(p *meshwire.MeshPacket, key []byte, m *mfb.Enrol, via str
 		} else if id, ok := e.st.ConsumePSK(m.PSK); ok {
 			how = id
 		} else {
-			reply(&mfb.Refusal{Code: mfb.CodeEnrolPSK})
+			reply(&mfb.Refusal{Node: node, Code: mfb.CodeEnrolPSK})
 			return
 		}
 	default:
-		reply(&mfb.Refusal{Code: mfb.CodeEnrolClosed})
+		reply(&mfb.Refusal{Node: node, Code: mfb.CodeEnrolClosed})
 		return
 	}
 	member, err := e.st.Enrol(node, key, how, pending)
 	if errors.Is(err, state.ErrKeyMismatch) {
-		reply(&mfb.Refusal{Code: mfb.CodeHomeRefused, Text: "node number already enrolled"})
+		reply(&mfb.Refusal{Node: node, Code: mfb.CodeHomeRefused, Text: "node number already enrolled"})
 		return
 	}
 	if err != nil {

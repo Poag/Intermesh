@@ -134,11 +134,8 @@ func TestTooLongHomeMessageIsTruncatedToTheMaximumParts(t *testing.T) {
 	var got string
 	eventually(t, "the truncated message arrives", func() bool {
 		for _, h := range decodeChannel(t, away.gw.all(), "InterRoam", away.roamKey()) {
-			if h.To != roamer.num {
-				continue
-			}
 			if m, err := mfb.Parse(h.Text); err == nil {
-				if s, ok := m.(*mfb.Sealed); ok {
+				if s, ok := m.(*mfb.Sealed); ok && s.Node == roamer.num {
 					if text, done, err := ra.Add(time.Now(), 1, toRoamer, s); err == nil && done {
 						got = text
 						return true

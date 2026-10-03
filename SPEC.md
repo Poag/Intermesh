@@ -13,6 +13,7 @@ What changed in the revision: the Meshtastic firmware and protobuf behaviour lis
   - The gateway must not have the CLIENT_MUTE role or rebroadcast mode NONE, or packets the server downlinks are never transmitted.
   - A channel name must be configured on the gateway exactly as the server spells it. The firmware finds the channel case-insensitively but then compares the topic's channel name case-sensitively, so `interroam` would not match `InterRoam`.
   - Gateways need uplink and downlink on for the channels the server bridges, and for downlink of direct messages at least one channel must have downlink on.
+  - A gateway uplinks a packet it merely received only if it can decode it with a channel it holds, or if it is a PKI direct message (header channel byte 0) not addressed to the gateway. For decoded packets from other nodes it drops those without the OK to MQTT bit unless the server's address is a private one (192.168/16, 172.16/12, 10/8, 169.254/16, 100.64/10, 127.0.0.1). So with a community server on a public address, **every member node needs OK to MQTT turned on** for its packets, including the NodeInfo the server learns its key from, to reach the server.
 - Channel scopes: mesh only, community, federated, public. Default is the narrowest. In the reference server a community, federated or public channel is relayed between the community's own gateways; federated and public do not yet cross to other servers or to the public MQTT broker.
 - Servers federate with each other only, not with ordinary fediverse software (may be opened later).
 
@@ -25,7 +26,7 @@ Every on-air message is one line of ASCII text starting `MFB1`, then a type lett
 - Days: a single digit, 1 to 7. The longest registration is one week.
 - Roaming channel: name `InterRoam` (9 characters; the firmware limit is 11), firmware default key (the shorthand PSK value 1, which the firmware expands to `d4f1bb3a20290759f0bcffabcf4e6901`), position sharing off, uplink and downlink on at gateways. The roamer's node must use the same region, modem preset and frequency slot as the visited mesh (decided: the roamer sets this). Secondary channels use only the key and name and ignore radio settings, and the frequency slot is derived from the primary channel's name unless set explicitly; this came from the earlier summarising pass and was not re-read.
 - Server identity: each server has a Curve25519 key pair and its node number is the CRC-32 (IEEE) of its public key, exactly as for any node. This is what lets nodes trust the server's signed NodeInfo and its signed beacon (see section 8). The admin hands out the node ID and public key as the server contact.
-- Size budget (verified rule, estimate of the result): a node signs a broadcast only if the encoded Data message including a 64-byte signature field (66 bytes with the protobuf tag and length) fits 239 bytes, which is 255 minus the 16-byte header. That leaves roughly 160 bytes of text on a signed broadcast. Unsigned unicasts and downlinks have more room (the payload limit is 233 bytes). An earlier draft double counted the header; this is the corrected rule. The reference codec budgets 166 bytes per signed line and 232 per unsigned line.
+- Size budget (verified rule, estimate of the result): a node signs a broadcast only if the encoded Data message including a 64-byte signature field (66 bytes with the protobuf tag and length) fits 239 bytes, which is 255 minus the 16-byte header. That leaves roughly 160 bytes of text on a signed broadcast. Unsigned packets have more room (the payload limit is 233 bytes). An earlier draft double counted the header; this is the corrected rule. The reference codec budgets 166 bytes per signed line and 232 per unsigned line.
 
 ## 3. On-air messages
 
@@ -48,24 +49,24 @@ Every on-air message is one line of ASCII text starting `MFB1`, then a type lett
 
 `MFB1 E <psk>`
 
-- A PKI direct message to the server contact (node ID and public key, shared by the admin as a Meshtastic shared contact if apps support it; manual entry of both is the documented fallback; neither is verified). `-` for public enrolment or a request awaiting manual approval. Otherwise the PSK itself. Replies, also PKI direct messages: `MFB1 K` enrolled, `MFB1 P` pending admin approval, or a refusal.
+- A PKI direct message to the server contact (node ID and public key, shared by the admin as a Meshtastic shared contact if apps support it; manual entry of both is the documented fallback; neither is verified). `-` for public enrolment or a request awaiting manual approval. Otherwise the PSK itself. Replies, also PKI direct messages: `MFB1 K` enrolled, `MFB1 P` pending admin approval, or a refusal (`MFB1 X <node> <code>`).
 - Preconditions found in the firmware (verified): a node refuses to send a PKI message to a node whose public key it does not have, so the member's node must already hold the server's key (shared contact, or the server's announced NodeInfo). Gateways uplink the raw encrypted packet, which does not carry the sender's key, so the server can decrypt the DM only if it already knows the member's key, learned from a NodeInfo broadcast the member's node sent on a channel the server holds (accepted only if the key's CRC-32 equals the node number). For the server's reply to be transmitted, the gateway's node database must already hold both nodes, so the server announces itself.
 - Enrolment modes (admin chooses): public; PSK by DM; manual (PSK or a console checkbox); closed (refusal EC). PSK types: non-expiring, rotating (admin-set period, default 7 days; only the current PSK is accepted after rotation), single-use, multi-use with expiry. The admin shares PSKs out of band. Revoking a PSK stops new enrolments but keeps enrolled nodes; admins remove nodes individually.
 - The registry stores each node's number and full public key and refuses a different key for an enrolled node number. Public enrolment still binds the first key to a number, but a later claimant cannot replace it. Replay protection by packet ID applies to enrolment DMs.
 
-### Registration confirmation (visited server to roamer)
+### Registration confirmation (visited server, to the roamer)
 
-`MFB1 C <tag> <days> <name>`
+`MFB1 C <node> <tag> <days> <name>`
 
-- Name is last, may contain spaces, set by the admin (limit 24 characters).
-- Sent as a unicast text addressed to the roamer on the roaming channel (readable by anyone holding the public InterRoam key, so it carries no secret), not as a PKI message. A node only decrypts a PKI message from a sender whose key it already holds, and a roamer cannot be assumed to hold the visited server's key. This departs from the earlier draft's "DM"; the reference server uses the unicast.
+- node: the roamer's node ID. Name is last, may contain spaces, set by the admin (limit 24 characters).
+- Sent as a **broadcast** on the roaming channel, signed when the signed packet fits, naming the roamer in the text. It cannot be a text addressed to the roamer: the firmware refuses a channel-encrypted text message addressed to the node ("Rejecting legacy DM" in `perhapsDecode`, verified from source; licensed nodes are exempt). A PKI direct message would work only if the roamer's node held the visited server's key and the gateway held both nodes' records, which cannot be assumed. This departs from the earlier draft's "DM" and from its format, which had no node field. Anyone holding the public InterRoam key can read it, and it already shows who is roaming.
 
 ### Refusal notice (states the reason, admin may add text)
 
-`MFB1 X <code> [free text]`
+`MFB1 X <node> <code> [free text]`
 
-- CL community closed; NS no free slots (also used when the per-home-tag rate limit is hit); BL home server blocked by this community; US registration not signed (firmware 2.8 required) or the signature does not verify; UH home server unknown or unreachable; HR home server refused (node not enrolled or not approved); RP repeated registration (also used when the per-node rate limit is hit); BF malformed message; EP enrolment PSK invalid, expired or used; EC enrolment closed.
-- Registration refusals are unicasts on the roaming channel like the confirmation. Enrolment refusals are PKI direct messages. The mapping of rate limits to NS and RP is this draft's choice.
+- node: the node being refused. CL community closed; NS no free slots (also used when the per-home-tag rate limit is hit); BL home server blocked by this community; US registration not signed (firmware 2.8 required) or the signature does not verify; UH home server unknown or unreachable; HR home server refused (node not enrolled or not approved); RP repeated registration (also used when the per-node rate limit is hit); BF malformed message; EP enrolment PSK invalid, expired or used; EC enrolment closed.
+- Registration refusals are broadcasts on the roaming channel, for the reason given under the confirmation. Enrolment refusals and the replies K and P are PKI direct messages, which work because the member's node holds the server's key (it had to, to send the enrolment) and the server's NodeInfo announcement lets the gateway hold both nodes. The mapping of rate limits to NS and RP is this draft's choice.
 
 ### Sealed traffic (home server and the roamer's roaming-aware app)
 
@@ -73,6 +74,7 @@ Every on-air message is one line of ASCII text starting `MFB1`, then a type lett
 
 - node: roamer's node ID. ch: 2-hex home channel number defined by the home server. ctr: per-direction counter in hex, advanced for every part, also the nonce. part: such as `2/3`, `1/1` when it fits one packet. data: ciphertext plus 16-byte tag, base64url without padding.
 - Keys (pending independent cryptography review): for each registration and home channel, two keys by HKDF-SHA256 from the home channel key, salt empty, with the info string `intermesh/MFB1/seal/v1|<direction>|<home tag>|<node, 8 hex>|<accepted registration packet ID, 8 hex>|<home channel name>` where direction is `to-home` or `to-roamer`. Authenticated cipher: ChaCha20-Poly1305. The nonce is 4 zero bytes followed by the counter as 8 bytes big-endian. The associated data is the visible header `<node, 8 hex> <ch, 2 hex> <ctr, hex> <part>/<total>`, so a relay cannot renumber parts or move a part. The visited server never holds the keys.
+- Delivery: sealed parts travel as **broadcasts** on the roaming channel in both directions (a text addressed to a node would be refused by the firmware, as above), signed when the signed packet fits and unsigned when it does not, which is exactly when a receiver on the balanced policy accepts an unsigned broadcast from a node it knows signs. Everyone in range of the visited gateway hears the sealed parts and cannot read them; the node field names the roamer.
 - Capacity: 78 bytes of text per part on a signed broadcast line of 166 bytes, 128 bytes per part on an unsigned line (computed by the codec's tests; not measured on air). Long messages are split into numbered parts; the admin sets the maximum parts (default 3). A missing part is dropped after an admin-set wait (default 2 minutes) and the receiver can show a gap. No retransmission.
 - Replay: each registration keeps a replay window of 64 counters per direction. Windows are kept per registration, because a re-registration derives new keys and restarts counters at zero.
 - The sealed key derivation gives no forward secrecy and is not an audited design.
@@ -80,7 +82,7 @@ Every on-air message is one line of ASCII text starting `MFB1`, then a type lett
 ## 4. Roaming rules (decided)
 
 - The visited server relays nothing until the home server accepts. Pending registrations take no slot.
-- The visited server refuses what it can see itself: community closed, unsigned, no slots, unknown or blocked home tag, rate limits. Everything else is the home server's decision.
+- The visited server tells the roamer by broadcast (see the confirmation and refusal notice). It refuses what it can see itself: community closed, unsigned, no slots, unknown or blocked home tag, rate limits. Everything else is the home server's decision.
 - The home server decrypts the forwarded packet with the InterRoam key, verifies the signature against the enrolled node's key, checks enrolment, and remembers accepted registration packet IDs for one week plus an admin-set margin, rejecting repeats.
 - Slots are concurrent accepted registrations, set by the admin. Admin-set rate limits per node ID and per home tag.
 - Registration ends early when the roamer is heard on the home mesh. If a roamer is registered with two communities, the home server replies through whichever relayed last.
@@ -164,12 +166,12 @@ Kind `sealed` carries one part of sealed traffic (`ch` and `part` are additions 
 - A signed registration broadcast names the home community but not the visited one, so a recorded broadcast can be replayed at a different visited server. The home server's packet ID memory accepts it only once, so an attacker who wins the race between the legitimate visited gateway and their own could redirect one registration to a server of their choosing. The consequence is denial of service for that roamer (sealed traffic stays unreadable), not disclosure. A proposed fix is to include the visited server's tag in the signed message; that changes a decided format and is listed for review in the design notes, not applied.
 - Enrolment DMs are PKI direct messages encrypted to the server's own key. They are uplinked only with MQTT encryption on.
 - No forward secrecy for sealed traffic if a home channel key later leaks. Retention is an admin-set limit per channel (stored by the reference server, not yet enforced because it keeps no message history); admins are responsible for data protection compliance such as UK GDPR. Not legal advice.
-- The roamer's status messages are readable by anyone holding the InterRoam key, which is public.
+- The roamer's status messages and the sealed parts are broadcasts on the roaming channel, so anyone holding the public InterRoam key can read the status text, see that a node is roaming and where, and see the sealed parts (not read them).
 - Gateways never see one another's uplink: the broker enforces per-gateway credentials and delivers a gateway only what the server chooses to send it.
 
 ## 7. Open items
 
-- App behaviour, none of which was checked: shared contact import and manual entry of a node ID and key in stock apps, whether a roaming-aware app exists or who builds it, and how apps show the unicast status messages.
+- App behaviour, none of which was checked: whether apps show a broadcast text on the InterRoam channel that names the node, shared contact import and manual entry of a node ID and key in stock apps, and whether a roaming-aware app exists or who builds it.
 - Real on-air behaviour: nothing has run on hardware. Sealed message capacity and beacon airtime are computed, not measured.
 - Whether LOCAL_ONLY and KNOWN_ONLY rebroadcast modes also stop a downlinked packet (only NONE and the mute role were checked).
 - Whether a gateway accepts a downlinked NodeInfo from a node it does not know and whether a node verifies the server's signed beacon after learning its key; the code was read but nothing was run.
@@ -188,6 +190,7 @@ Read on 3 and 4 October 2026 from the revisions named at the top. Files are unde
 - A downlinked packet is rebroadcast like any received packet if its hop limit is above zero, it is not to or from the gateway, its next hop is unset, its destination is not the no-LoRa broadcast address, and the gateway's role is not CLIENT_MUTE with rebroadcast mode not NONE (`mesh/NextHopRouter.cpp`, `mesh/FloodingRouter.cpp`).
 - Channel crypto: AES-CTR; IV is packet ID (8 bytes little-endian), sender node number (4 bytes little-endian) and four zero bytes. Channel hash is the XOR of the name bytes and key bytes (further XOR 0xAE for AEAD channels). The default key and shorthand rules are in section 2 (`mesh/Channels.cpp`, `mesh/CryptoEngine.cpp`). A per-channel `use_aead` setting exists; this draft does not use it.
 - PKI direct messages: key is SHA-256 of the X25519 shared secret; AES-CCM with an 8-byte tag and a 13-byte nonce made of packet ID, an extra nonce and the sender number; on the wire ciphertext, tag, then the 4-byte extra nonce (12 bytes overhead). The firmware's own test vector is reproduced by the reference code.
+- A channel-encrypted text message addressed to the receiving node is rejected by a node that is not licensed (`mesh/Router.cpp`, "Rejecting legacy DM"). A received packet is uplinked by a gateway only if it decodes with a held channel, or is an undecodable direct message with header channel byte 0 not addressed to the gateway and MQTT encryption is on.
 - Signing: described in sections 2 and 6. The signed buffer is version 0x01, then little-endian from, packet ID, to, port number, request ID, reply ID, emoji, bitfield, a flags byte, then the payload. Verification is plain Ed25519 against the sender's Curve25519 key converted to Ed25519 with the sign bit zero. The reference code was checked in both directions against the firmware's pinned Crypto library (meshtastic/Crypto commit 1c817c2f27aa4593e07d0f7e13b3dbf8d980bcae) built natively.
 - Receivers verify only against a key they already hold, except that a NodeInfo whose node number is the CRC-32 of its key and whose signature verifies bootstraps the key. The default policy is COMPATIBLE.
 - Packet IDs have a rolling 10-bit counter and 22 fresh random bits, so a recorded ID is not a collision risk.

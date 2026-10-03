@@ -221,7 +221,7 @@ func TestRoamingBetweenTwoRunningServers(t *testing.T) {
 	var confirm *mfb.Confirm
 	waitFor(t, "the roamer is told it is registered, over the visited server's MQTT downlink", func() bool {
 		for _, env := range away.downlinks() {
-			if env.Packet.To != roamer.Num || env.ChannelID != "InterRoam" {
+			if env.ChannelID != "InterRoam" {
 				continue
 			}
 			d, err := simmesh.OpenChannel(env, rc.Key)
@@ -229,7 +229,7 @@ func TestRoamingBetweenTwoRunningServers(t *testing.T) {
 				continue
 			}
 			if m, err := mfb.Parse(string(d.Payload)); err == nil {
-				if c, ok := m.(*mfb.Confirm); ok {
+				if c, ok := m.(*mfb.Confirm); ok && c.Node == roamer.Num {
 					confirm = c
 				}
 			}

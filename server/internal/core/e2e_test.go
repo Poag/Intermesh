@@ -12,6 +12,9 @@ import (
 	"github.com/Poag/Intermesh/server/internal/state"
 )
 
+// xr is the refusal line a node should receive: the message names the node.
+func xr(n *simNode, code string) string { return "MFB1 X " + nodeHex(n.num) + " " + code }
+
 func lastPKIText(t *testing.T, s *site, n *simNode) string {
 	t.Helper()
 	got := decodePKI(t, s.gw.all(), n, s.serverNum(), s.serverPub())
@@ -41,14 +44,14 @@ func TestEnrolmentModes(t *testing.T) {
 					t.Fatalf("public enrolment: %q", got)
 				}
 			case EnrolClosed:
-				if got := send("MFB1 E -"); got != "MFB1 X EC" {
+				if got := send("MFB1 E -"); got != xr(n, "EC") {
 					t.Fatalf("closed: %q", got)
 				}
 			case EnrolPSK:
-				if got := send("MFB1 E -"); got != "MFB1 X EP" {
+				if got := send("MFB1 E -"); got != xr(n, "EP") {
 					t.Fatalf("no PSK: %q", got)
 				}
-				if got := send("MFB1 E wrong"); got != "MFB1 X EP" {
+				if got := send("MFB1 E wrong"); got != xr(n, "EP") {
 					t.Fatalf("wrong PSK: %q", got)
 				}
 				p, _ := s.st.NewPSK(state.PSKSingleUse, "", 0, time.Time{})
@@ -59,7 +62,7 @@ func TestEnrolmentModes(t *testing.T) {
 				s.uplink("Home", other.nodeInfoUplink(t, "Home", s.home.Key, s.gwID))
 				s.gw.clear()
 				s.uplink("PKI", other.dmUplink(t, s.serverNum(), s.serverPub(), "MFB1 E "+p.Secret, s.gwID))
-				if got := lastPKIText(t, s, other); got != "MFB1 X EP" {
+				if got := lastPKIText(t, s, other); got != xr(other, "EP") {
 					t.Fatalf("a single-use PSK worked twice: %q", got)
 				}
 			case EnrolManual:
@@ -188,11 +191,12 @@ func TestRoamingEndToEnd(t *testing.T) {
 	// the roamer was told, by a unicast on the roaming channel
 	var conf *mfb.Confirm
 	for _, h := range decodeChannel(t, away.gw.all(), "InterRoam", away.roamKey()) {
-		if h.To == roamer.num {
-			if m, err := mfb.Parse(h.Text); err == nil {
-				if c, ok := m.(*mfb.Confirm); ok {
-					conf = c
+		if m, err := mfb.Parse(h.Text); err == nil {
+			if c, ok := m.(*mfb.Confirm); ok && c.Node == roamer.num {
+				if h.To != meshwire.BroadcastNum {
+					t.Fatalf("the confirmation was addressed to %08x: the firmware refuses a channel text addressed to a node, so it must be a broadcast", h.To)
 				}
+				conf = c
 			}
 		}
 	}
@@ -228,14 +232,14 @@ func TestRoamingEndToEnd(t *testing.T) {
 	var got string
 	eventually(t, "the sealed home message reaches the roamer through the visited server", func() bool {
 		for _, h := range decodeChannel(t, away.gw.all(), "InterRoam", away.roamKey()) {
-			if h.To != roamer.num {
-				continue
-			}
 			m, err := mfb.Parse(h.Text)
 			if err != nil {
 				continue
 			}
-			if s, ok := m.(*mfb.Sealed); ok {
+			if s, ok := m.(*mfb.Sealed); ok && s.Node == roamer.num {
+				if h.To != meshwire.BroadcastNum {
+					t.Fatalf("sealed downlink addressed to %08x: must be a broadcast", h.To)
+				}
 				if text, done, err := ra.Add(time.Now(), 1, toRoamer, s); err == nil && done {
 					got = text
 					return true
@@ -267,11 +271,8 @@ func refusalFor(t *testing.T, s *site, n *simNode) string {
 	t.Helper()
 	var code string
 	for _, h := range decodeChannel(t, s.gw.all(), "InterRoam", s.roamKey()) {
-		if h.To != n.num {
-			continue
-		}
 		if m, err := mfb.Parse(h.Text); err == nil {
-			if r, ok := m.(*mfb.Refusal); ok {
+			if r, ok := m.(*mfb.Refusal); ok && r.Node == n.num {
 				code = r.Code
 			}
 		}

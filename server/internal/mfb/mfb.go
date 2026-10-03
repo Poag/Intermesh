@@ -71,15 +71,19 @@ type Enrolled struct{}
 // Pending is the reply "MFB1 P".
 type Pending struct{}
 
-// Confirm is "MFB1 C <tag> <days> <name>"; the name is last and may contain spaces.
+// Confirm is "MFB1 C <node> <tag> <days> <name>"; the name is last and may contain spaces. The
+// message names the roamer because the firmware refuses a channel-encrypted text addressed to
+// a node, so it travels as a broadcast on the roaming channel (or as a PKI direct message).
 type Confirm struct {
+	Node    uint32
 	HomeTag string
 	Days    int
 	Name    string
 }
 
-// Refusal is "MFB1 X <code> [free text]".
+// Refusal is "MFB1 X <node> <code> [free text]", delivered like Confirm.
 type Refusal struct {
+	Node uint32
 	Code string
 	Text string
 }
@@ -189,20 +193,25 @@ func Parse(line string) (any, error) {
 		}
 		return &Pending{}, nil
 	case "C":
-		if len(f) < 5 || !isLowerHex(f[2], 8) {
+		if len(f) < 6 || !isLowerHex(f[3], 8) {
 			return nil, ErrMalformed
 		}
-		days, ok := parseDays(f[3])
-		name := strings.Join(f[4:], " ")
-		if !ok || name == "" || len(name) > MaxNameLen {
+		node, ok1 := hex8(f[2])
+		days, ok2 := parseDays(f[4])
+		name := strings.Join(f[5:], " ")
+		if !ok1 || !ok2 || name == "" || len(name) > MaxNameLen {
 			return nil, ErrMalformed
 		}
-		return &Confirm{HomeTag: f[2], Days: days, Name: name}, nil
+		return &Confirm{Node: node, HomeTag: f[3], Days: days, Name: name}, nil
 	case "X":
-		if len(f) < 3 || !refusalCodes[f[2]] {
+		if len(f) < 4 || !refusalCodes[f[3]] {
 			return nil, ErrMalformed
 		}
-		return &Refusal{Code: f[2], Text: strings.Join(f[3:], " ")}, nil
+		node, ok := hex8(f[2])
+		if !ok {
+			return nil, ErrMalformed
+		}
+		return &Refusal{Node: node, Code: f[3], Text: strings.Join(f[4:], " ")}, nil
 	case "S":
 		if len(f) != 7 {
 			return nil, ErrMalformed
@@ -280,14 +289,14 @@ func (*Enrolled) String() string { return "MFB1 K" }
 func (*Pending) String() string  { return "MFB1 P" }
 
 func (m *Confirm) String() string {
-	return fmt.Sprintf("MFB1 C %s %d %s", m.HomeTag, m.Days, m.Name)
+	return fmt.Sprintf("MFB1 C %08x %s %d %s", m.Node, m.HomeTag, m.Days, m.Name)
 }
 
 func (m *Refusal) String() string {
 	if m.Text == "" {
-		return "MFB1 X " + m.Code
+		return fmt.Sprintf("MFB1 X %08x %s", m.Node, m.Code)
 	}
-	return "MFB1 X " + m.Code + " " + m.Text
+	return fmt.Sprintf("MFB1 X %08x %s %s", m.Node, m.Code, m.Text)
 }
 
 func (m *Sealed) String() string {

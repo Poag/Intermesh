@@ -174,9 +174,9 @@ func (e *Engine) heardAtHome(node uint32, via string) {
 		}
 	}
 	if tag, ok := e.st.TakeRenameNotice(node); ok {
-		if !e.sendPKI(node, "Community tag changed to "+tag+". Use it for new roaming registrations.", via) {
-			e.sendUnicast(e.roamChannel(), node, "Community tag changed to "+tag+". Use it for new roaming registrations.", via)
-		}
+		// PKI only: a channel text addressed to a node is refused by the firmware, and members have
+		// the server's key because they enrolled by direct message.
+		e.sendPKI(node, "Community tag changed to "+tag+". Use it for new roaming registrations.", via)
 	}
 }
 

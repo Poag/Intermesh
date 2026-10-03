@@ -204,7 +204,7 @@ func (e *Engine) relayDownAtVisited(from state.Peer, node uint32, ro ap.RelayObj
 		if len(line) > mfb.UnsignedLineBudget {
 			return &ap.BadActivity{Reason: "sealed part too long"}
 		}
-		e.sendUnicast(e.roamChannel(), node, line, v.Via)
+		e.broadcastText(e.roamChannel(), line, v.Via)
 	case ap.KindPacket:
 		raw, err := base64.StdEncoding.DecodeString(ro.Packet)
 		if err != nil {

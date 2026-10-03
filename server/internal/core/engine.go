@@ -342,11 +342,16 @@ func (e *Engine) sendPKI(node uint32, text, via string) bool {
 	return true
 }
 
-// sendUnicast sends a text addressed to one node on a channel. Anyone holding the channel
-// key can read it, so it carries only status text. Roaming status messages use the roaming
-// channel this way because a node needs no key for the server to decrypt it, unlike a PKI
-// message.
-func (e *Engine) sendUnicast(ch *state.Channel, node uint32, text, via string) {
+// broadcastText downlinks a text as a broadcast on a channel through the gateway named by
+// via, or through every gateway granted the channel if via is empty. It is signed when the
+// signed packet would fit, which is the rule the firmware applies when sending and when
+// deciding whether an unsigned broadcast from a known signer is a downgrade.
+//
+// Roaming status and sealed traffic travel this way and not as a text addressed to the node:
+// the firmware refuses a channel-encrypted text message addressed to it ("Rejecting legacy
+// DM", Router.cpp perhapsDecode), so a unicast would never reach the roamer's app. The
+// roamer is named inside the text instead.
+func (e *Engine) broadcastText(ch *state.Channel, text, via string) {
 	if ch == nil {
 		return
 	}
@@ -357,7 +362,7 @@ func (e *Engine) sendUnicast(ch *state.Channel, node uint32, text, via string) {
 	if len(targets) == 0 {
 		targets = e.gatewaysFor(ch.Name, "", "")
 	}
-	e.sendChannel(ch, node, meshwire.PortText, []byte(text), false, targets)
+	e.sendChannel(ch, meshwire.BroadcastNum, meshwire.PortText, []byte(text), true, targets)
 }
 
 // publishTo publishes a pre-built envelope on the PKI topic to one gateway, or to every
@@ -380,19 +385,20 @@ func (e *Engine) publishTo(channel, via string, payload []byte) {
 }
 
 // refuse sends a refusal notice stating the reason. Enrolment refusals go as PKI direct
-// messages; roaming refusals as a unicast on the roaming channel (see sendUnicast).
+// messages; roaming refusals as a broadcast on the roaming channel naming the node (see
+// broadcastText).
 func (e *Engine) refuse(node uint32, code, text, via string, pki bool) {
 	if !mfb.ValidCode(code) {
 		code = mfb.CodeBadFormat
 	}
-	line := (&mfb.Refusal{Code: code, Text: text}).String()
+	line := (&mfb.Refusal{Node: node, Code: code, Text: text}).String()
 	if len(line) > mfb.DMLineBudget {
 		line = line[:mfb.DMLineBudget]
 	}
 	if pki && e.sendPKI(node, line, via) {
 		return
 	}
-	e.sendUnicast(e.roamChannel(), node, line, via)
+	e.broadcastText(e.roamChannel(), line, via)
 }
 
 func (e *Engine) baseURL() string { return strings.TrimSuffix(e.self.ActorURL, "/actor") }

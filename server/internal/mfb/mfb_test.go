@@ -17,8 +17,8 @@ func TestRoundTrips(t *testing.T) {
 		&Roam{HomeTag: "4be10c77", Days: 0},
 		&Enrol{}, &Enrol{PSK: "correct-horse"},
 		&Enrolled{}, &Pending{},
-		&Confirm{HomeTag: "9f3a07c2", Days: 3, Name: "Kent Mesh Group"},
-		&Refusal{Code: CodeNoSlots}, &Refusal{Code: CodeHomeRefused, Text: "ask the admin"},
+		&Confirm{Node: 0xc0ffee01, HomeTag: "9f3a07c2", Days: 3, Name: "Kent Mesh Group"},
+		&Refusal{Node: 0xc0ffee01, Code: CodeNoSlots}, &Refusal{Node: 1, Code: CodeHomeRefused, Text: "ask the admin"},
 		&Sealed{Node: 0xc0ffee01, Ch: 1, Ctr: 0x1f, Part: 2, Total: 3, Data: bytes.Repeat([]byte{9}, 20)},
 	}
 	for _, m := range msgs {
@@ -64,8 +64,9 @@ func TestIgnoreAndMalformed(t *testing.T) {
 		"MFB1 B 9f3a07c2 a1b2c3d4 X 12 3", "MFB1 B 9F3A07C2 a1b2c3d4 O 12 3", "MFB1 B 9f3a07c2 a1b2c3d4 O -1 3",
 		"MFB1 B 9f3a07c2 a1b2c3d4 O 12 8", "MFB1 B 9f3a07c2 a1b2c3d4 O 12 0", "MFB1 B 9f3a07c2 a1b2c3d4 O 12",
 		"MFB1 R 4be10c7 3", "MFB1 R 4be10c77 8", "MFB1 R 4be10c77 33", "MFB1 R 4be10c77",
-		"MFB1 E", "MFB1 K x", "MFB1 C 9f3a07c2 3", "MFB1 C 9f3a07c2 3 " + strings.Repeat("n", 25),
-		"MFB1 X ZZ", "MFB1 X",
+		"MFB1 E", "MFB1 K x", "MFB1 C c0ffee01 9f3a07c2 3", "MFB1 C c0ffee01 9f3a07c2 3 " + strings.Repeat("n", 25),
+		"MFB1 C 9f3a07c2 3 Name", "MFB1 C zzzzzzzz 9f3a07c2 3 Name",
+		"MFB1 X c0ffee01 ZZ", "MFB1 X c0ffee01", "MFB1 X NS", "MFB1 X c0ffee0 NS",
 		"MFB1 S c0ffee01 1 1f 2/3 AAAA", "MFB1 S c0ffee01 1 1f 4/3 " + strings.Repeat("A", 40), "MFB1 S c0ffee01 01 zz 1/1 " + strings.Repeat("A", 40),
 	} {
 		if _, err := Parse(l); !errors.Is(err, ErrMalformed) {
