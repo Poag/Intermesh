@@ -62,7 +62,11 @@ type Peer struct {
 	HomeTag   string    `json:"homeTag"`
 	Inbox     string    `json:"inbox"`
 	KeyID     string    `json:"keyId"`
-	PublicKey []byte    `json:"publicKey"` // Ed25519, from the actor document
+	PublicKey []byte    `json:"publicKey"`          // Ed25519, from the actor document
+	OldKeyID  string    `json:"oldKeyId,omitempty"` // previous key, accepted until OldUntil
+	OldKey    []byte    `json:"oldKey,omitempty"`
+	OldUntil  time.Time `json:"oldUntil,omitempty"`
+	Created   time.Time `json:"created,omitempty"` // when the peer's identity was created (published on its actor)
 	FirstSeen time.Time `json:"firstSeen"`
 	LastHeard time.Time `json:"lastHeard"`
 	Blocked   bool      `json:"blocked,omitempty"`

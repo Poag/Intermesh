@@ -27,6 +27,10 @@ func (st *State) UpsertPeer(p Peer, cap int) error {
 		}
 		if p.KeyID != "" {
 			old.KeyID, old.PublicKey = p.KeyID, p.PublicKey
+			old.OldKeyID, old.OldKey, old.OldUntil = p.OldKeyID, p.OldKey, p.OldUntil
+		}
+		if !p.Created.IsZero() {
+			old.Created = p.Created
 		}
 		old.LastHeard = now
 		old.Manual = old.Manual || p.Manual
