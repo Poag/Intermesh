@@ -188,7 +188,7 @@ func TestRoamingEndToEnd(t *testing.T) {
 		t.Fatalf("expiry %v, want about %v (the roamer asked for 2 days, the default is 3)", reg.Expires, want)
 	}
 
-	// the roamer was told, by a unicast on the roaming channel
+	// the roamer was told, by a broadcast on the roaming channel that names it
 	var conf *mfb.Confirm
 	for _, h := range decodeChannel(t, away.gw.all(), "InterRoam", away.roamKey()) {
 		if m, err := mfb.Parse(h.Text); err == nil {
