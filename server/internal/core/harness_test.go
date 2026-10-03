@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -205,6 +206,8 @@ type site struct {
 	cfg  Config
 	gwID string
 	home *state.Channel
+	// override lets a test replace the federation handler without racing the HTTP goroutines.
+	override atomic.Pointer[func(ctx context.Context, from state.Peer, act *ap.Activity) error]
 }
 
 func newSite(t *testing.T, clk *fakeClock, name string, mod func(*Config)) *site {
@@ -244,7 +247,12 @@ func newSite(t *testing.T, clk *fakeClock, name string, mod func(*Config)) *site
 		t.Fatal(err)
 	}
 	s.eng = eng
-	s.srv.Handle = eng.HandleActivity
+	s.srv.Handle = func(ctx context.Context, from state.Peer, act *ap.Activity) error {
+		if f := s.override.Load(); f != nil {
+			return (*f)(ctx, from, act)
+		}
+		return eng.HandleActivity(ctx, from, act)
+	}
 	s.srv.OnNewPeer = eng.OnNewPeer
 	s.srv.OnPeer = eng.OnPeer
 
