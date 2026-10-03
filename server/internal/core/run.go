@@ -45,6 +45,7 @@ func (e *Engine) Tick(lastIntroduce *time.Time) {
 		}
 	}
 	e.st.ExpireRegistrations()
+	_ = e.st.Flush()
 	e.st.Prune(state.MaxRegistrationDays*24*time.Hour+e.cfg.ReplayMargin, ap.DefaultMaxAge*2)
 	for _, l := range e.up.Expire(now, e.cfg.PartWait) {
 		e.log.Info("sealed message dropped: a part never arrived", "node", nodeHex(l.Node), "have", l.Have, "total", l.Total)

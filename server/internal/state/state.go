@@ -153,11 +153,18 @@ type snapshot struct {
 
 // State is the server's durable state.
 type State struct {
-	mu   sync.Mutex
-	path string
-	s    snapshot
-	now  func() time.Time
+	mu        sync.Mutex
+	path      string
+	s         snapshot
+	now       func() time.Time
+	dirty     bool      // a lazy change has not been written yet
+	lastWrite time.Time // time of the last write to disk
 }
+
+// lazyInterval is how long lazy writers wait between writes. Counters, replay memory, enrolment
+// and identity are always written at once (persist); last-heard times, learned keys and activity
+// ids may wait (persistLazy) so a busy server does not rewrite the file on every packet.
+const lazyInterval = 5 * time.Second
 
 // Open loads state from path, or starts empty if the file does not exist. An empty path
 // keeps state in memory only (tests).
@@ -254,7 +261,34 @@ func (st *State) persist() error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), st.path)
+	if err := os.Rename(tmp.Name(), st.path); err != nil {
+		return err
+	}
+	st.dirty, st.lastWrite = false, time.Now()
+	return nil
+}
+
+// persistLazy writes at most once per lazyInterval and otherwise marks the state dirty for Flush.
+// The caller holds the lock.
+func (st *State) persistLazy() error {
+	if st.path == "" {
+		return nil
+	}
+	if time.Since(st.lastWrite) >= lazyInterval {
+		return st.persist()
+	}
+	st.dirty = true
+	return nil
+}
+
+// Flush writes any change that lazy writers left pending. Call it periodically and on shutdown.
+func (st *State) Flush() error {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if !st.dirty {
+		return nil
+	}
+	return st.persist()
 }
 
 var b32 = base32.StdEncoding.WithPadding(base32.NoPadding)
@@ -483,7 +517,7 @@ func (st *State) LearnKey(node uint32, pub []byte) bool {
 		return string(old) == string(pub)
 	}
 	st.s.NodeKeys[node] = append([]byte(nil), pub...)
-	_ = st.persist()
+	_ = st.persistLazy()
 	return true
 }
 
@@ -570,7 +604,7 @@ func (st *State) NoteGatewayNode(username, nodeID string) {
 	defer st.mu.Unlock()
 	if g, ok := st.s.Gateways[username]; ok && g.NodeID != nodeID {
 		g.NodeID = nodeID
-		_ = st.persist()
+		_ = st.persistLazy()
 	}
 }
 

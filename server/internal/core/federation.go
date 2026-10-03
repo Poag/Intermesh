@@ -99,6 +99,10 @@ func (e *Engine) handleIntroduce(from state.Peer, act *ap.Activity) error {
 		if u, err := url.Parse(s.Actor); err != nil || u.Host == "" {
 			continue
 		}
+		// A trusted peer can still be wrong or hostile; bound how many servers we go and look up.
+		if !e.learnLimit.Allow("learn", e.now()) {
+			break
+		}
 		todo = append(todo, s.Actor)
 	}
 	if len(todo) == 0 {

@@ -227,6 +227,9 @@ func (e *Engine) handleRoam(from state.Peer, act *ap.Activity) error {
 		return rej(mfb.CodeBadFormat, "")
 	}
 	rc := e.roamChannel()
+	if rc == nil {
+		return rej(mfb.CodeCommunityClosed, "roaming channel not configured")
+	}
 	plain, err := meshcrypto.CTR(rc.Key, p.From, p.ID, p.Encrypted)
 	if err != nil {
 		return rej(mfb.CodeBadFormat, "")

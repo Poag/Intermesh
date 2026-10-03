@@ -164,6 +164,7 @@ func (a *App) Close() {
 		a.adminSrv.Shutdown(ctx)
 	}
 	a.Broker.Close()
+	defer a.State.Flush()
 	done := make(chan struct{})
 	go func() { a.Out.Wait(); close(done) }()
 	select {

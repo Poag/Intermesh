@@ -320,3 +320,46 @@ func TestChannelLookupIsCaseInsensitive(t *testing.T) {
 		t.Fatal("lookup should ignore case")
 	}
 }
+
+func TestLazyWritesAreThrottledButCriticalOnesAreNot(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	st, err := Open(path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.AcceptRegistration(1, "https://v", 5, 2) // critical: written at once
+	st.mu.Lock()
+	first := st.lastWrite
+	st.mu.Unlock()
+	if first.IsZero() {
+		t.Fatal("a critical write did not reach the disk")
+	}
+	// lazy writers inside the interval only mark the state dirty
+	st.SeenActivity("a")
+	st.LearnKey(2, make([]byte, 32))
+	st.mu.Lock()
+	dirty := st.dirty
+	st.mu.Unlock()
+	if !dirty {
+		t.Fatal("lazy changes were not left pending")
+	}
+	st2, _ := Open(path, nil)
+	if _, ok := st2.NodeKey(2); ok {
+		t.Fatal("a lazy change was written straight away")
+	}
+	// Flush writes them
+	if err := st.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	st3, _ := Open(path, nil)
+	if _, ok := st3.NodeKey(2); !ok {
+		t.Fatal("Flush did not write the pending change")
+	}
+	// a critical write also carries any pending lazy change with it
+	st.SeenActivity("b")
+	st.NextDownCounter(1, "https://v", 1)
+	st4, _ := Open(path, nil)
+	if !st4.SeenActivity("b") {
+		t.Fatal("pending lazy change lost when a critical write followed")
+	}
+}

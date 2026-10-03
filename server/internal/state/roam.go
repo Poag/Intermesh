@@ -34,7 +34,7 @@ func (st *State) UpsertPeer(p Peer, cap int) error {
 		}
 		old.LastHeard = now
 		old.Manual = old.Manual || p.Manual
-		return st.persist()
+		return st.persistLazy()
 	}
 	cp := p
 	cp.FirstSeen, cp.LastHeard = now, now
@@ -402,7 +402,7 @@ func (st *State) TouchRelayed(node uint32, visitor string) {
 	defer st.mu.Unlock()
 	if r, ok := st.s.Registrations[regKey(node, visitor)]; ok {
 		r.LastRelayed = st.now()
-		_ = st.persist()
+		_ = st.persistLazy()
 	}
 }
 
@@ -465,6 +465,7 @@ func (st *State) SeenActivity(id string) bool {
 		return true
 	}
 	st.s.SeenActivities[id] = st.now()
+	_ = st.persistLazy()
 	return false
 }
 

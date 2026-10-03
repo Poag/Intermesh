@@ -69,6 +69,7 @@ type Engine struct {
 	nodeLimit    *state.RateLimiter
 	tagLimit     *state.RateLimiter
 	relayLimit   *state.RateLimiter
+	learnLimit   *state.RateLimiter
 	pending      map[uint32]string // roamer node -> roam activity id, for matching answers
 	outbound     map[string]bool   // follow activity ids we sent
 }
@@ -101,6 +102,7 @@ func New(cfg Config, st *state.State, gw Gateways, fed Federation, self ap.Self,
 		nodeLimit:  state.NewRateLimiter(cfg.RatePerNode, cfg.RateWindow),
 		tagLimit:   state.NewRateLimiter(cfg.RatePerTag, cfg.RateWindow),
 		relayLimit: state.NewRateLimiter(cfg.RelayPerMinute, time.Minute),
+		learnLimit: state.NewRateLimiter(200, time.Hour),
 		pending:    map[uint32]string{}, outbound: map[string]bool{},
 	}
 	e.serverID = meshcrypto.NodeID(e.serverNum)
