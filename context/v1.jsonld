@@ -8,19 +8,101 @@
     "Relay": "im:Relay",
     "Introduce": "im:Introduce",
     "Rename": "im:Rename",
-    "node": { "@id": "im:node", "@type": "xsd:string" },
-    "homeTag": { "@id": "im:homeTag", "@type": "xsd:string" },
-    "packetId": { "@id": "im:packetId", "@type": "xsd:unsignedInt" },
-    "days": { "@id": "im:days", "@type": "xsd:unsignedByte" },
-    "packet": { "@id": "im:packet", "@type": "xsd:base64Binary" },
-    "direction": { "@id": "im:direction", "@type": "xsd:string" },
-    "kind": { "@id": "im:kind", "@type": "xsd:string" },
-    "ctr": { "@id": "im:ctr", "@type": "xsd:unsignedLong" },
-    "data": { "@id": "im:data", "@type": "xsd:string" },
-    "servers": { "@id": "im:servers", "@container": "@set" },
-    "lastHeard": { "@id": "im:lastHeard", "@type": "xsd:dateTime" },
-    "oldTag": { "@id": "im:oldTag", "@type": "xsd:string" },
-    "newTag": { "@id": "im:newTag", "@type": "xsd:string" },
-    "server": { "@id": "im:server", "@type": "@id" }
+    "node": {
+      "@id": "im:node",
+      "@type": "xsd:string"
+    },
+    "homeTag": {
+      "@id": "im:homeTag",
+      "@type": "xsd:string"
+    },
+    "packetId": {
+      "@id": "im:packetId",
+      "@type": "xsd:unsignedInt"
+    },
+    "days": {
+      "@id": "im:days",
+      "@type": "xsd:unsignedByte"
+    },
+    "packet": {
+      "@id": "im:packet",
+      "@type": "xsd:base64Binary"
+    },
+    "direction": {
+      "@id": "im:direction",
+      "@type": "xsd:string"
+    },
+    "kind": {
+      "@id": "im:kind",
+      "@type": "xsd:string"
+    },
+    "ctr": {
+      "@id": "im:ctr",
+      "@type": "xsd:unsignedLong"
+    },
+    "data": {
+      "@id": "im:data",
+      "@type": "xsd:string"
+    },
+    "servers": {
+      "@id": "im:servers",
+      "@container": "@set"
+    },
+    "lastHeard": {
+      "@id": "im:lastHeard",
+      "@type": "xsd:dateTime"
+    },
+    "oldTag": {
+      "@id": "im:oldTag",
+      "@type": "xsd:string"
+    },
+    "newTag": {
+      "@id": "im:newTag",
+      "@type": "xsd:string"
+    },
+    "server": {
+      "@id": "im:server",
+      "@type": "@id"
+    },
+    "sec": "https://w3id.org/security#",
+    "expires": {
+      "@id": "im:expires",
+      "@type": "xsd:dateTime"
+    },
+    "code": {
+      "@id": "im:code",
+      "@type": "xsd:string"
+    },
+    "text": {
+      "@id": "im:text",
+      "@type": "xsd:string"
+    },
+    "ch": {
+      "@id": "im:ch",
+      "@type": "xsd:string"
+    },
+    "part": {
+      "@id": "im:part",
+      "@type": "xsd:string"
+    },
+    "publicKey": {
+      "@id": "sec:publicKey"
+    },
+    "previousPublicKey": {
+      "@id": "im:previousPublicKey",
+      "@type": "@id"
+    },
+    "publicKeyMultibase": {
+      "@id": "sec:publicKeyMultibase",
+      "@type": "xsd:string"
+    },
+    "owner": {
+      "@id": "sec:owner",
+      "@type": "@id"
+    },
+    "validUntil": {
+      "@id": "im:validUntil",
+      "@type": "xsd:dateTime"
+    }
   }
 }

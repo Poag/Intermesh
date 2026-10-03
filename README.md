@@ -2,7 +2,7 @@
 
 A draft design for replacing Meshtastic's MQTT uplink with a federation of local community ActivityPub servers.
 
-Status: design draft, 3 October 2026. Nothing is built or tested on hardware. Every claim about Meshtastic firmware and every library note comes from summarising web pages or secondary sources, and must be re-read from the primary source before building. See [SPEC.md](SPEC.md).
+Status: design draft with a prototype server, 4 October 2026. The Meshtastic firmware behaviour the design relies on was read from the firmware source (see section 8 of [SPEC.md](SPEC.md)), and a reference server in [server/](server/) implements the draft and passes its tests. **Nothing has been tested on real hardware, on the air, or with the Meshtastic mobile apps**, and nothing has had an independent security review.
 
 ## The idea
 
@@ -18,7 +18,8 @@ The design decisions so far (enrolment modes, beacons, signing, replay limits, k
 
 ## What is not done
 
-- No code yet. The reference server is planned in Go.
+- The reference server in [server/](server/) is a prototype. Persisted delivery queues, message retention, crossing federated channels to other servers and a roaming-aware app are not done.
+- Behaviour of the Meshtastic mobile apps (contact import, entering a server contact by hand) was not checked.
 - Licence: GPL-3.0, chosen by the project owner; see [LICENSE](LICENSE). The licences of any reused code still need checking for compatibility. This is not legal advice.
 - An independent cryptography review of the sealing scheme is still needed before the spec is locked.
 
