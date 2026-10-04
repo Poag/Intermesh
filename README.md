@@ -14,7 +14,7 @@ Servers federate with each other only, using custom ActivityPub activities (Roam
 
 ## What is suggested so far
 
-The design suggestions so far, all open for comment (enrolment modes, beacons, signing, replay limits, key rotation, retries, server discovery and more) are written into [SPEC.md](SPEC.md). Items still open are listed at the end of that file.
+The design suggestions so far, all open for comment (enrolment modes, beacons, signing, replay limits, key rotation, retries, server discovery and more) are written into [SPEC.md](SPEC.md). Items still open are listed at the end of that file. The spec describes the minimal change method (stock firmware); a sketch of a possible optimal method, a dedicated roaming message format, is in [ROAMING-FORMAT.md](ROAMING-FORMAT.md).
 
 ## What is not done
 
