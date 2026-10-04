@@ -6,7 +6,7 @@ Status: design draft with a prototype server, 4 October 2026. The Meshtastic fir
 
 ## The idea
 
-Each community runs its own small server, written in Go, with a built-in MQTT listener. A "border node" is an ordinary Meshtastic gateway pointed at that server over MQTT, so the firmware needs no changes beyond stock 2.8. The server holds the channel keys for the channels it bridges. Local traffic stays local: every channel has a scope (mesh only, community, federated or public), and the default is the narrowest.
+Each community runs its own small server, written in Go, with a built-in MQTT listener. A "border node" is an ordinary Meshtastic gateway pointed at that server over MQTT, so no firmware changes are needed beyond stock 2.8 and some settings (notably Ignore MQTT off, which the firmware turns on by default in regions with a duty cycle limit such as the UK; see section 1 of [SPEC.md](SPEC.md)). The server holds the channel keys for the channels it bridges. Local traffic stays local: every channel has a scope (mesh only, community, federated or public), and the default is the narrowest.
 
 People who travel keep their identity at home. A roamer registers with a visited community by sending a signed broadcast on a shared roaming channel (InterRoam, on the firmware default key). The visited server passes the signed packet to the roamer's home server, which checks the signature and accepts or refuses. Until the home server accepts, the visited server relays nothing. Home traffic then flows sealed, so the visited server never holds a key or a readable copy.
 
@@ -19,7 +19,7 @@ The design suggestions so far, all open for comment (enrolment modes, beacons, s
 ## What is not done
 
 - The reference server in [server/](server/) is a prototype. Persisted delivery queues, message retention, crossing federated channels to other servers and a roaming-aware app are not done.
-- Behaviour of the Meshtastic mobile apps (contact import, entering a server contact by hand) was not checked.
+- The Meshtastic mobile apps were read from source for contact import and beacon offers (section 8 of [SPEC.md](SPEC.md)) but nothing was tried on a phone, and how they display the server's broadcast status text was not checked.
 - Licence: GPL-3.0, chosen by the project owner; see [LICENSE](LICENSE). The licences of any reused code still need checking for compatibility. This is not legal advice.
 - An independent cryptography review of the sealing scheme is still needed before the spec is locked.
 

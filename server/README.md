@@ -12,7 +12,7 @@ Needs Go 1.26 (the module declares it; a newer toolchain is fetched automaticall
     go test ./...
     go test -race ./...
 
-The cross-check of the XEdDSA code against the firmware's own cryptography library needs a native build of that library; see [internal/meshcrypto/testdata/README.md](internal/meshcrypto/testdata/README.md). That test is skipped unless `INTERMESH_XEDDSA_HARNESS` points at the built harness.
+The cross-check of the XEdDSA code against the firmware's own cryptography library needs a native build of that library; see [internal/meshcrypto/testdata/README.md](internal/meshcrypto/testdata/README.md). That test is skipped unless `INTERMESH_XEDDSA_HARNESS` points at the built harness. Likewise the wire codec is compared against the firmware's nanopb by `internal/meshwire/nanopb_test.go`, skipped unless `INTERMESH_NANOPB_HARNESS` points at a build (see [internal/meshwire/testdata/README.md](internal/meshwire/testdata/README.md)).
 
 ## Run
 
