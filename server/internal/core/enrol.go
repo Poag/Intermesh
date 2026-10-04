@@ -46,7 +46,7 @@ func (e *Engine) handlePKI(u broker.Uplink, p *meshwire.MeshPacket) {
 }
 
 // enrol handles "MFB1 E <psk>". The request carries the PSK itself inside a PKI direct
-// message, so gateways and visited communities cannot read it (decided 3 Oct 2026).
+// message, so gateways and visited communities cannot read it (suggested 3 Oct 2026).
 func (e *Engine) enrol(p *meshwire.MeshPacket, key []byte, m *mfb.Enrol, via string) {
 	node := p.From
 	// Replay protection by packet ID stays: a recorded enrolment cannot be replayed.

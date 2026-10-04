@@ -6,7 +6,7 @@ package core
 
 import "time"
 
-// Enrolment modes (decided 3 Oct 2026: the admin chooses).
+// Enrolment modes (suggested 3 Oct 2026: the admin chooses).
 const (
 	EnrolPublic = "public" // any node can enrol; no PSK needed
 	EnrolPSK    = "psk"    // a valid PSK is required
@@ -22,7 +22,7 @@ const (
 	ScopePublic    = "public"
 )
 
-// BeaconConfig holds the beacon settings. Beacons are off by default (decided 3 Oct 2026).
+// BeaconConfig holds the beacon settings. Beacons are off by default (suggested 3 Oct 2026).
 type BeaconConfig struct {
 	Enabled   bool
 	Interval  time.Duration // periodic beacon; zero means no periodic beacon
@@ -59,7 +59,7 @@ type Config struct {
 	Beacon BeaconConfig
 }
 
-// DefaultConfig returns the defaults decided in the design.
+// DefaultConfig returns the defaults suggested in the design.
 func DefaultConfig() Config {
 	return Config{
 		Name:             "Community",

@@ -12,9 +12,9 @@ People who travel keep their identity at home. A roamer registers with a visited
 
 Servers federate with each other only, using custom ActivityPub activities (Roam, Relay, Introduce, Rename) signed with RFC 9421 HTTP message signatures.
 
-## What is decided
+## What is suggested so far
 
-The design decisions so far (enrolment modes, beacons, signing, replay limits, key rotation, retries, server discovery and more) are written into [SPEC.md](SPEC.md). Items still open are listed at the end of that file.
+The design suggestions so far, all open for comment (enrolment modes, beacons, signing, replay limits, key rotation, retries, server discovery and more) are written into [SPEC.md](SPEC.md). Items still open are listed at the end of that file.
 
 ## What is not done
 

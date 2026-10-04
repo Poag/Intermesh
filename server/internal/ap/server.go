@@ -16,7 +16,7 @@ import (
 	"github.com/Poag/Intermesh/server/internal/state"
 )
 
-// Defaults decided on 3 Oct 2026 (admin-changeable).
+// Defaults suggested on 3 Oct 2026 (admin-changeable).
 const (
 	DefaultMaxBody = 64 << 10
 	DefaultMaxAge  = 5 * time.Minute
@@ -204,7 +204,7 @@ func (s *Server) serveInbox(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := actorOfKeyID(keyID)
 	if s.State.IsBlocked(actor) {
-		// Blocking is silent: the sender is not answered in any useful way (decided 3 Oct 2026).
+		// Blocking is silent: the sender is not answered in any useful way (suggested 3 Oct 2026).
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}

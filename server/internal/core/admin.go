@@ -143,7 +143,7 @@ func (e *Engine) SetChannel(name string, psk []byte, scope string, uplink, downl
 }
 
 // RotateAPKey makes a new ActivityPub signing key. The new key is published on the actor at
-// once and the old one stays valid for overlap (admin-triggered rotation, decided 3 Oct 2026).
+// once and the old one stays valid for overlap (admin-triggered rotation, suggested 3 Oct 2026).
 func (e *Engine) RotateAPKey(client *ap.Client, overlap time.Duration) error {
 	id := e.st.Identity()
 	oldPub := ed25519.NewKeyFromSeed(id.APPriv).Public().(ed25519.PublicKey)

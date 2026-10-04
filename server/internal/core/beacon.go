@@ -18,7 +18,7 @@ func (e *Engine) BeaconLine() string {
 }
 
 // maybeBeacon sends a beacon unless one was sent within the admin's minimum gap. The gap caps
-// the new-node trigger (decided 3 Oct 2026); there is no fixed floor in the spec.
+// the new-node trigger (suggested 3 Oct 2026); there is no fixed floor in the spec.
 func (e *Engine) maybeBeacon(trigger bool) {
 	e.mu.Lock()
 	if !e.lastBeacon.IsZero() && e.now().Sub(e.lastBeacon) < e.cfg.Beacon.MinGap {

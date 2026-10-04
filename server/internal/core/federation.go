@@ -149,7 +149,7 @@ func (e *Engine) OnNewPeer(p state.Peer) {
 }
 
 // OnPeer is called whenever a peer's actor document has been fetched. It resolves a tag
-// clash: when two servers hold the same tag the newer one renames (decided 3 Oct 2026).
+// clash: when two servers hold the same tag the newer one renames (suggested 3 Oct 2026).
 func (e *Engine) OnPeer(p state.Peer, doc *ap.ActorDoc) {
 	if p.Actor == e.self.ActorURL || doc.HomeTag != e.HomeTag() {
 		return
@@ -220,7 +220,7 @@ func (e *Engine) handleRename(from state.Peer, act *ap.Activity) error {
 
 // LinkUp links this server to another by hand: it fetches the other server's actor to confirm
 // it answers, then sends a standard Follow. The other server accepts unless it has blocked us;
-// no second-admin approval is needed (decided 3 Oct 2026).
+// no second-admin approval is needed (suggested 3 Oct 2026).
 func (e *Engine) LinkUp(ctx context.Context, actorURL string) (*state.Peer, error) {
 	p, err := e.fed.Learn(ctx, actorURL, true)
 	if err != nil {

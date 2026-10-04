@@ -37,7 +37,7 @@ var DefaultSchedule = []time.Duration{
 	time.Hour, 3 * time.Hour, 6 * time.Hour, 12 * time.Hour,
 }
 
-// GiveUpAfter is how long a delivery is retried before it is dropped (decided 3 Oct 2026).
+// GiveUpAfter is how long a delivery is retried before it is dropped (suggested 3 Oct 2026).
 const GiveUpAfter = 24 * time.Hour
 
 // MaxActorBytes caps an actor document fetch.

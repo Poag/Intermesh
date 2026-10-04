@@ -44,7 +44,7 @@ type PSK struct {
 	Revoked      bool          `json:"revoked,omitempty"`
 }
 
-// DefaultRotation is the default period of a rotating PSK (decided 3 Oct 2026).
+// DefaultRotation is the default period of a rotating PSK (suggested 3 Oct 2026).
 const DefaultRotation = 7 * 24 * time.Hour
 
 // Member is a node enrolled with this server as its home.

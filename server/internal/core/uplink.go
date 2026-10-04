@@ -63,7 +63,7 @@ func (e *Engine) HandleUplink(u broker.Uplink) {
 func (e *Engine) handleChannel(u broker.Uplink, p *meshwire.MeshPacket) {
 	ch, ok := e.st.Channel(u.Channel)
 	if !ok || !ch.Uplink {
-		// Decided 3 Oct 2026: when a gateway's permissions do not match a channel's settings,
+		// Suggested 3 Oct 2026: when a gateway's permissions do not match a channel's settings,
 		// drop the traffic and log an error naming the gateway and channel. The admin console
 		// shows it too; the gateway is not messaged.
 		e.log.Error("uplink dropped: channel not enabled for uplink", "gateway", u.Username, "channel", u.Channel)

@@ -47,7 +47,7 @@ func (e *Engine) handleRoamText(u broker.Uplink, p *meshwire.MeshPacket, data *m
 
 // handleRegistration is the visited server's side of "MFB1 R <hometag> <days>". It checks
 // what it can see itself, then asks the home server; it relays nothing for the roamer until
-// the home server accepts (decided 3 Oct 2026).
+// the home server accepts (suggested 3 Oct 2026).
 func (e *Engine) handleRegistration(u broker.Uplink, p *meshwire.MeshPacket, data *meshwire.Data, m *mfb.Roam) {
 	node, via, now := p.From, u.GatewayID, e.now()
 	deny := func(code, text string) { e.refuse(node, code, text, via, false) }

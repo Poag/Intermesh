@@ -15,7 +15,7 @@ import (
 )
 
 // The admin API is the admin console: JSON over HTTP on a local address, protected by a bearer
-// token in the data directory. There is no web interface for members (decided 3 Oct 2026).
+// token in the data directory. There is no web interface for members (suggested 3 Oct 2026).
 
 type adminFunc func(r *http.Request) (any, int, error)
 
