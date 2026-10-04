@@ -6,6 +6,12 @@ What changed in the revision: the Meshtastic firmware and protobuf behaviour lis
 
 A note on wording: "suggested" in this document means proposed and open for comment. It includes the choices the project owner has so far leaned towards. Nothing here is settled until the Meshtastic community and the people who would run servers have had a chance to say otherwise.
 
+## Approach: the minimal change method
+
+This draft is the minimal change method. It is built to work with unmodified Meshtastic firmware and the existing mobile apps: roaming and enrolment travel as ordinary text broadcasts and PKI direct messages that today's nodes already send and receive, and every size, signing and key rule below is shaped by what stock firmware accepts (section 8). That is why messages are short text lines, why status goes out as broadcasts naming the node, and why a node's key has to reach the server through a shared contact or a NodeInfo packet.
+
+The suggested optimal method is a new message format for roaming messages, designed so that keys can be passed through the community servers more easily. For example, the roaming request could carry the node's public key and signature in a structured payload so that a visited server could learn and verify it without relying on a NodeInfo packet or a shared contact. The details are not worked out. That would need firmware (and probably app) changes and agreement from the Meshtastic project, so it is not designed here. A detailed proposal is an open item (section 7). The minimal change method is meant to work today and to be replaced by the new format if the project adopts one.
+
 ## 1. Architecture in brief
 
 - A community server (Go, small enough for a Raspberry Pi class device) with a built-in MQTT listener (TLS when exposed to the internet) and no web interface. Members use their mesh apps; admins use an admin console.
@@ -174,6 +180,7 @@ Kind `sealed` carries one part of sealed traffic (`ch` and `part` are additions 
 
 ## 7. Open items
 
+- A designed proposal for the optimal method (a dedicated roaming message format carrying keys and signatures between community servers); the minimal change method in this draft is the stopgap for unmodified firmware.
 - App behaviour, partly checked by reading the Android and Apple app source (see section 8) and not tried on a phone: whether apps show a broadcast text on the InterRoam channel that names the node, a phone-side check that a contact link imports as expected, and whether a roaming-aware app exists or who builds it.
 - Real on-air behaviour: nothing has run on hardware. Sealed message capacity and beacon airtime are computed, not measured.
 - In LOCAL_ONLY and KNOWN_ONLY rebroadcast modes a gateway relays an undecodable PKI unicast only if the sender or receiver has a user record in its node database (read from source). How KNOWN_ONLY treats decoded broadcasts from an unknown node number was not traced.
